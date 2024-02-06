@@ -9,39 +9,36 @@ import pyrogram
 from uuid import uuid4
 from pyrogram.types import InlineKeyboardButton,InlineKeyboardMarkup
 
+async def UpscaleImages(image: bytes) -> str:
+    """
+    Upscales an image and return with upscaled image path.
+    """
+    client = AsyncClient()
+    content = await client.upscale(image)
+    await client.close()
+    upscaled_file_path = "upscaled.png"
+    with open(upscaled_file_path, "wb") as output_file:
+        output_file.write(content)
+    return upscaled_file_path
 
 @app.on_message(filters.reply & filters.command("upscale"))
-async def upscale_image(client, message):
+@Client.on_message(filters.command(["upscale"]))
+async def upscaleImages(_, message):
+    file = await getFile(message)
+    if file == 1:
+       return await message.reply_text("File size is large")
+    if file is None:
+       return await message.reply_text("Replay to an image?")
+    msg = await message.reply("wait a min...")
+    imageBytes = open(file,"rb").read()
+    os.remove(file)
+    upscaledImage = await UpscaleImages(imageBytes)
     try:
-        if not message.reply_to_message or not message.reply_to_message.photo:
-            await message.reply_text("**ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀɴ ɪᴍᴀɢᴇ ᴛᴏ ᴜᴘsᴄᴀʟᴇ ɪᴛ.**")
-            return
-
-        image = message.reply_to_message.photo.file_id
-        file_path = await client.download_media(image)
-
-        with open(file_path, "rb") as image_file:
-            f = image_file.read()
-
-        b = base64.b64encode(f).decode("utf-8")
-
-        async with httpx.AsyncClient() as http_client:
-            response = await http_client.post(
-                "https://api.qewertyy.me/upscale", data={"image_data": b}, timeout=None
-            )
-
-        with open("upscaled_image.png", "wb") as output_file:
-            output_file.write(response.content)
-
-        await client.send_document(
-            message.chat.id,
-            document="upscaled_image.png",
-            caption="**ʜᴇʀᴇ ɪs ᴛʜᴇ ᴜᴘsᴄᴀʟᴇᴅ ɪᴍᴀɢᴇ!**",
-        )
-
+      await message.reply_document(open(upscaledImage,"rb"))
+      await msg.delete()
+      os.remove(upscaledImage)
     except Exception as e:
-        print(f"**ғᴀɪʟᴇᴅ ᴛᴏ ᴜᴘsᴄᴀʟᴇ ᴛʜᴇ ɪᴍᴀɢᴇ**: {e}")
-        await message.reply_text("**ғᴀɪʟᴇᴅ ᴛᴏ ᴜᴘsᴄᴀʟᴇ ᴛʜᴇ ɪᴍᴀɢᴇ. ᴘʟᴇᴀsᴇ ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ**.")
+       await msg.edit(f"{e}")
 
 ######### sticker id
 
